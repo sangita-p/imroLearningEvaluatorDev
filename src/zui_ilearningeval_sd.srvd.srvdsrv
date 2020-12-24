@@ -1,0 +1,4 @@
+@EndUserText.label: 'Learning Service Definition'
+define service ZUI_ILEARNINGEVAL_SD {
+  expose ZC_ILEARNINGEVAL as Learning;
+}

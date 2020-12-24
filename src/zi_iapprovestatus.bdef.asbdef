@@ -1,0 +1,22 @@
+managed implementation in class zbp_i_iapprovestatus unique;
+
+define behavior for ZI_IAPPROVESTATUS alias ApprovalStatus
+persistent table ziapprovestatus
+lock master
+//authorization master ( instance )
+//etag master <field_name>
+{
+  create;
+  update;
+  delete;
+
+  field ( numbering : managed, readonly ) ApprovalStatusUuid;
+
+  mapping for ziapprovestatus
+  {
+    ApprovalStatusUuid = as_uuid;
+    ApprovalStatusId = as_id;
+    ApprovalStatus = approval_status;
+
+  }
+}

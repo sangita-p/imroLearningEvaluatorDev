@@ -1,0 +1,4 @@
+@EndUserText.label: 'Approval Status Service Definition'
+define service ZUI_IAPPROVESTATUS_SD {
+  expose ZC_IAPPROVESTATUS as ApprovalStatus;
+}

@@ -1,0 +1,53 @@
+managed implementation in class zbp_i_ilearningeval unique;
+
+define behavior for ZI_ILEARNINGEVAL alias Learning
+persistent table ZILEARNINGEVAL
+lock master
+//authorization master ( instance )
+//etag master <field_name>
+{
+  create;
+  update;
+  delete;
+
+  field ( numbering : managed, readonly ) LearningUuid;
+  field ( mandatory : create ) EmployeeId, EmployeeName, CoreSkill, TopicToLearn, LearningMode, StartDate, EndDate, HoursEstimated;
+  field ( readonly ) LearningId, LastChangedDate, ApproveRejectDate;
+
+  determination setInitialLearningStatus on save { create; }
+  determination setInitialApprovalStatus on save { create; }
+  determination calculateLearningID on save { create; }
+  determination setCreationDate on save { create; }
+  determination setApproveRejectDate on modify { create; update; }
+  determination setLastUpdateDate on modify { create; update; }
+
+  action ( features : instance ) approveLearning result [1] $self;
+  action ( features : instance ) rejectLearning result [1] $self;
+
+  validation validateDates on save { field StartDate, EndDate; create; update; }
+
+  mapping for zilearningeval
+  {
+    LearningUuid = learning_uuid;
+    LearningId = learning_id;
+    EmployeeId = employee_id;
+    EmployeeName = employee_name;
+    EmployeeBand = employee_band;
+    CoreSkill = core_skill;
+    TopicToLearn = topic_to_learn;
+    LearningMode = learning_mode;
+    StartDate = start_date;
+    EndDate = end_date;
+    LearningOutcomeId = learning_outcome_id;
+    HoursEstimated = hours_invested;
+    HoursOfOutcome = hours_of_outcome;
+    LearningSource = learning_source;
+    ApprovalStatusId = approval_status_id;
+    LearningStatusId = learning_status_id;
+    PointsEarned = points_earned;
+    LastChangedDate = last_changed_date;
+    CreationDate = creation_date;
+    ApproveRejectDate = approve_reject_date;
+    LearningOutcomeDate = learning_outcome_date;
+  }
+}

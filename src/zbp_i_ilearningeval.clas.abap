@@ -1,0 +1,5 @@
+CLASS zbp_i_ilearningeval DEFINITION PUBLIC ABSTRACT FINAL FOR BEHAVIOR OF zi_ilearningeval.
+ENDCLASS.
+
+CLASS zbp_i_ilearningeval IMPLEMENTATION.
+ENDCLASS.

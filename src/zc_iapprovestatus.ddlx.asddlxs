@@ -1,0 +1,36 @@
+@Metadata.layer: #CORE
+@UI: {
+  headerInfo: {
+    typeName: 'Approval Status',
+    typeNamePlural: 'Approval Status',
+    title: {
+      type: #STANDARD,
+      label: 'Approval Staus',
+      value: 'ApprovalStatus'
+    }
+  },
+  presentationVariant: [ { sortOrder: [ { by       : 'ApprovalStatusId',
+                                          direction:  #ASC }] }]
+}
+
+annotate view ZC_IAPPROVESTATUS
+    with 
+{
+
+  @UI.facet: [ {   id:              'ApprovalStatusId',
+                   purpose:         #STANDARD,
+                   type:            #IDENTIFICATION_REFERENCE,
+                   label:           'Approval Status',
+                   position:        10 }]
+
+//    ApprovalStatusUuid;
+    @UI: { lineItem:       [ { position: 10, label: 'ID' } ],
+    identification: [ { position: 10 } ] }
+
+    ApprovalStatusId;
+      @UI: {  lineItem:       [ { position: 20, label: 'Approval Status' } ],
+              identification: [ { position: 20 } ],
+              selectionField: [ { position: 20 } ] }
+    ApprovalStatus;
+    
+}
