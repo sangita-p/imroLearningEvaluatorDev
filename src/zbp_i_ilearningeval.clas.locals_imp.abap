@@ -80,6 +80,7 @@ CLASS lhc_Learning IMPLEMENTATION.
       ls_learnings-LearningStatusId = wa_learnings-LearningStatusId.
     ENDLOOP.
 
+    " If LearningStatus = Sent for Approval (2), only then it can be approved
     IF ls_learnings-LearningStatusId = '2'.
 
       " Set the new status as approved
@@ -104,7 +105,7 @@ CLASS lhc_Learning IMPLEMENTATION.
                           ( %tky   = new_learning-%tky
                             %param = new_learning ) ).
 
-      " If LearningStatus = New (1) then it cannot be approved
+    " If LearningStatus = New (1) then it cannot be approved
     ELSEIF ls_learnings-LearningStatusId = '1'.
       READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
       ENTITY Learning
@@ -127,26 +128,88 @@ CLASS lhc_Learning IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD rejectLearning.
-    " Set the new overall status
-    MODIFY ENTITIES OF zi_ilearningeval IN LOCAL MODE
-      ENTITY Learning
-         UPDATE
-           FIELDS ( ApprovalStatusId )
-           WITH VALUE #( FOR key IN keys
-                           ( %tky         = key-%tky
-                             ApprovalStatusId = approval_status-rejected ) )
-      FAILED failed
-      REPORTED reported.
+*    " Set the new overall status
+*    MODIFY ENTITIES OF zi_ilearningeval IN LOCAL MODE
+*      ENTITY Learning
+*         UPDATE
+*           FIELDS ( ApprovalStatusId )
+*           WITH VALUE #( FOR key IN keys
+*                           ( %tky         = key-%tky
+*                             ApprovalStatusId = approval_status-rejected ) )
+*      FAILED failed
+*      REPORTED reported.
+*
+*    " Fill the response table
+*    READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
+*      ENTITY Learning
+*        ALL FIELDS WITH CORRESPONDING #( keys )
+*      RESULT DATA(new_learnings).
+*
+*    result = VALUE #( FOR new_learning IN new_learnings
+*                        ( %tky   = new_learning-%tky
+*                          %param = new_learning ) ).
 
-    " Fill the response table
     READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
-      ENTITY Learning
-        ALL FIELDS WITH CORRESPONDING #( keys )
-      RESULT DATA(new_learnings).
+          ENTITY Learning
+            FIELDS ( LearningStatusId ApprovalStatusId ) WITH CORRESPONDING #( keys )
+          RESULT DATA(learnings).
 
-    result = VALUE #( FOR new_learning IN new_learnings
-                        ( %tky   = new_learning-%tky
-                          %param = new_learning ) ).
+    DATA wa_learnings TYPE zi_ilearningeval.
+    DATA ls_learnings TYPE zi_ilearningeval.
+
+    LOOP AT learnings INTO wa_learnings.
+      ls_learnings-LearningStatusId = wa_learnings-LearningStatusId.
+    ENDLOOP.
+
+    " If LearningStatus = Sent for Approval (2), only then it can be approved/rejected
+    IF ls_learnings-LearningStatusId = '2'.
+
+      " Set the new status as approved
+      MODIFY ENTITIES OF zi_ilearningeval IN LOCAL MODE
+        ENTITY Learning
+           UPDATE
+             FIELDS ( ApprovalStatusId LearningStatusId )
+             WITH VALUE #( FOR key IN keys
+                             ( %tky         = key-%tky
+                               ApprovalStatusId = approval_status-rejected
+                               LearningStatusId = '3'
+                          ) )
+        FAILED failed
+        REPORTED reported.
+
+      " Fill the response table
+      READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
+        ENTITY Learning
+          ALL FIELDS WITH CORRESPONDING #( keys )
+        RESULT DATA(new_learnings).
+
+      result = VALUE #( FOR new_learning IN new_learnings
+                          ( %tky   = new_learning-%tky
+                            %param = new_learning ) ).
+
+    " If LearningStatus = New (1) then it cannot be approved/rejected
+    ELSEIF ls_learnings-LearningStatusId = '1'.
+      READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
+      ENTITY Learning
+        FIELDS ( LearningStatusId ) WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_learnings).
+
+      LOOP AT lt_learnings INTO DATA(learning).
+        APPEND VALUE #(  %tky        = learning-%tky
+                         %state_area = 'VALID_LEARNING_STATUS' )
+          TO reported-learning.
+
+        APPEND VALUE #( %tky = learning-%tky ) TO failed-learning.
+        APPEND VALUE #( %tky               = learning-%tky
+                        %state_area        = 'VALID_LEARNING_STATUS'
+                        %msg               = NEW zcl_iexception_message(
+                                                 severity  = if_abap_behv_message=>severity-error
+                                                 textid    = zcl_iexception_message=>unauthorized ) ) TO reported-learning.
+      ENDLOOP.
+    ENDIF.
+
+
+
   ENDMETHOD.
 
   METHOD setApproveRejectDate.

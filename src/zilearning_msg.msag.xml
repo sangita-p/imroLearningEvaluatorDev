@@ -18,7 +18,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZILEARNING_MSG</ARBGB>
      <MSGNR>002</MSGNR>
-     <TEXT>Learning Plan cannot be approved as Learning Status is still in New state</TEXT>
+     <TEXT>This Plan cannot be approved/rejected as Learning Status is in New state</TEXT>
     </T100>
    </T100>
   </asx:values>
