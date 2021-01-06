@@ -11,7 +11,7 @@ lock master
   delete;
 
   field ( numbering : managed, readonly ) LearningUuid;
-  field ( mandatory : create ) EmployeeId, EmployeeName, CoreSkill, TopicToLearn, LearningMode, StartDate, EndDate, HoursEstimated;
+  field ( mandatory : create ) EmployeeId, EmployeeName, CoreSkill, TopicToLearn, LearningOutcomeId, StartDate, EndDate, HoursEstimated ;
   field ( readonly ) LearningId, LastChangedDate, ApproveRejectDate;
 
   determination setInitialLearningStatus on save { create; }

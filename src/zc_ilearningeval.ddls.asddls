@@ -43,6 +43,7 @@ define root view entity ZC_ILEARNINGEVAL
       LearningStatusId,
       _LearningStatus.LearningStatus   as LearningStatus,
       
+      @Search.defaultSearchElement: true
       PointsEarned,
       LastChangedDate,
       CreationDate,

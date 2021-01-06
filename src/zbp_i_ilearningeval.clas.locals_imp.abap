@@ -58,7 +58,8 @@ CLASS lhc_Learning IMPLEMENTATION.
                                       ELSE if_abap_behv=>fc-o-enabled  )
               is_rejected =   COND #( WHEN learning-ApprovalStatusId = approval_status-rejected
                                       THEN if_abap_behv=>fc-o-disabled
-                                      ELSE if_abap_behv=>fc-o-enabled )
+                                      ELSE if_abap_behv=>fc-o-enabled
+                                      )
           IN
             ( %tky                 = learning-%tky
               %action-approveLearning = is_accepted
@@ -85,10 +86,11 @@ CLASS lhc_Learning IMPLEMENTATION.
       MODIFY ENTITIES OF zi_ilearningeval IN LOCAL MODE
         ENTITY Learning
            UPDATE
-             FIELDS ( ApprovalStatusId )
+             FIELDS ( ApprovalStatusId LearningStatusId )
              WITH VALUE #( FOR key IN keys
                              ( %tky         = key-%tky
-                               ApprovalStatusId = approval_status-approved ) )
+                               ApprovalStatusId = approval_status-approved
+                               LearningStatusId = '3' ) )
         FAILED failed
         REPORTED reported.
 
