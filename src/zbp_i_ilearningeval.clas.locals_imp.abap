@@ -172,7 +172,6 @@ CLASS lhc_Learning IMPLEMENTATION.
              WITH VALUE #( FOR key IN keys
                              ( %tky         = key-%tky
                                ApprovalStatusId = approval_status-rejected
-                               LearningStatusId = '3'
                           ) )
         FAILED failed
         REPORTED reported.
