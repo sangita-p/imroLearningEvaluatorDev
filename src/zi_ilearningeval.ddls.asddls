@@ -22,7 +22,25 @@ define root view entity ZI_ILEARNINGEVAL
       hours_of_outcome      as HoursOfOutcome,
       learning_source       as LearningSource,
       approval_status_id    as ApprovalStatusId,
+           
+      case _ApprovalStatus.ApprovalStatus
+        when 'Open'     then 2 //Yellow Color
+        when 'Approved' then 3 //Green Color
+        when 'Rejected' then 1 //Red color
+        else 2
+      end as ApprovalStatusC,
+      
       learning_status_id    as LearningStatusId,
+      
+      case _LearningStatus.LearningStatus
+        when 'New'                      then 0 //Grey Color
+        when 'Send for Approval'        then 2 //Yellow Color
+        when 'In Process'               then 3 //Green Color
+        when 'Learning Outcome Planned' then 3 //Green Color
+        when 'Complete'                 then 3 //Green Color
+        else 0
+      end as LearningStatusC,
+      
       points_earned         as PointsEarned,
       last_changed_date     as LastChangedDate,
       creation_date         as CreationDate,

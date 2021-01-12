@@ -1,13 +1,6 @@
 CLASS lhc_Learning DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
 
-    CONSTANTS:
-      BEGIN OF approval_status,
-        open     TYPE i VALUE '1', " Open
-        approved TYPE i VALUE '2', " Approved
-        rejected TYPE i VALUE '3', " Rejected
-      END OF approval_status.
-
     METHODS get_instance_features FOR INSTANCE FEATURES
       IMPORTING keys REQUEST requested_features FOR Learning RESULT result.
 
@@ -29,68 +22,100 @@ CLASS lhc_Learning DEFINITION INHERITING FROM cl_abap_behavior_handler.
     METHODS setCreationDate FOR DETERMINE ON SAVE
       IMPORTING keys FOR Learning~setCreationDate.
 
-    METHODS setInitialLearningStatus FOR DETERMINE ON SAVE
-      IMPORTING keys FOR Learning~setInitialLearningStatus.
-
     METHODS setInitialApprovalStatus FOR DETERMINE ON SAVE
       IMPORTING keys FOR Learning~setInitialApprovalStatus.
 
+    METHODS setInitialLearningStatus FOR DETERMINE ON SAVE
+      IMPORTING keys FOR Learning~setInitialLearningStatus.
+
     METHODS validateDates FOR VALIDATE ON SAVE
       IMPORTING keys FOR Learning~validateDates.
+
+    METHODS validateLearningStatus FOR VALIDATE ON SAVE
+      IMPORTING keys FOR Learning~validateLearningStatus.
 
 ENDCLASS.
 
 CLASS lhc_Learning IMPLEMENTATION.
 
   METHOD get_instance_features.
-    " Read the approval status of the existing learnings
     READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
-      ENTITY Learning
-        FIELDS ( ApprovalStatusId ) WITH CORRESPONDING #( keys )
-      RESULT DATA(learnings)
-      FAILED failed.
+    ENTITY Learning
+      FIELDS ( ApprovalStatusId LearningStatusId ) WITH CORRESPONDING #( keys )
+    RESULT DATA(learnings)
+    FAILED failed.
 
-    result =
-      VALUE #(
-        FOR learning IN learnings
-          LET is_accepted =   COND #( WHEN learning-ApprovalStatusId = approval_status-approved
-                                      THEN if_abap_behv=>fc-o-disabled
-                                      ELSE if_abap_behv=>fc-o-enabled  )
-              is_rejected =   COND #( WHEN learning-ApprovalStatusId = approval_status-rejected
-                                      THEN if_abap_behv=>fc-o-disabled
-                                      ELSE if_abap_behv=>fc-o-enabled
-                                      )
-          IN
-            ( %tky                 = learning-%tky
-              %action-approveLearning = is_accepted
-              %action-rejectLearning = is_rejected
-             ) ).
+    result = VALUE #( FOR learning IN learnings
+                      " When Approval Status = 2 (Approved), then the Approve Learning Plan action button is disabled
+                      LET is_accepted = COND #( WHEN learning-ApprovalStatusId = '2'
+                                                THEN if_abap_behv=>fc-o-disabled
+                                                ELSE if_abap_behv=>fc-o-enabled  )
+                       " When Approval Status = 3 (Rejected), then the Reject Learning Plan action button is disabled
+                          is_rejected = COND #( WHEN learning-ApprovalStatusId = '3'
+                                                THEN if_abap_behv=>fc-o-disabled
+                                                ELSE if_abap_behv=>fc-o-enabled )
+
+                      IN ( %tky                 = learning-%tky
+                           %action-approveLearning = is_accepted
+                           %action-rejectLearning = is_rejected
+
+                           " When Learning Plan is Rejected(3), it cannot be updated
+                            %features-%update = COND #( WHEN learning-ApprovalStatusId = '3'
+                                                        THEN if_abap_behv=>fc-f-read_only
+                                                        ELSE if_abap_behv=>fc-f-unrestricted )
+                           " When Learning Plan is Approved(2) or Rejected(3), it cannot be deleted
+                            %features-%delete = COND #( WHEN learning-ApprovalStatusId = '2' OR learning-ApprovalStatusId = '3'
+                                                        THEN if_abap_behv=>fc-o-disabled
+                                                        ELSE if_abap_behv=>fc-o-enabled )
+                ) ).
   ENDMETHOD.
 
   METHOD approveLearning.
     READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
-          ENTITY Learning
-            FIELDS ( LearningStatusId ApprovalStatusId ) WITH CORRESPONDING #( keys )
-          RESULT DATA(learnings).
+            ENTITY Learning
+              FIELDS ( LearningStatusId ApprovalStatusId ) WITH CORRESPONDING #( keys )
+            RESULT DATA(learnings).
 
     DATA wa_learnings TYPE zi_ilearningeval.
     DATA ls_learnings TYPE zi_ilearningeval.
 
     LOOP AT learnings INTO wa_learnings.
       ls_learnings-LearningStatusId = wa_learnings-LearningStatusId.
+      ls_learnings-ApprovalStatusId = wa_learnings-ApprovalStatusId.
     ENDLOOP.
 
-    " If LearningStatus = Sent for Approval (2), only then it can be approved
-    IF ls_learnings-LearningStatusId = '2'.
+    " If Learning Plan is Rejected (3) then display message 'This learning plan cannot be Approved as it is already Rejected'
+    IF ls_learnings-ApprovalStatusId = '3'.
+      READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
+      ENTITY Learning
+        FIELDS ( ApprovalStatusId ) WITH CORRESPONDING #( keys )
+      RESULT DATA(ll_learnings).
 
-      " Set the new status as approved
+      LOOP AT ll_learnings INTO DATA(ll_learning).
+        APPEND VALUE #(  %tky        = ll_learning-%tky
+                         %state_area = 'REJECTED_PLAN' )
+          TO reported-learning.
+
+        APPEND VALUE #( %tky = ll_learning-%tky ) TO failed-learning.
+        APPEND VALUE #( %tky               = ll_learning-%tky
+                        %state_area        = 'REJECTED_PLAN'
+                        %msg               = NEW zcl_iexception_message(
+                                                 severity  = if_abap_behv_message=>severity-error
+                                                 textid    = zcl_iexception_message=>rejected_plan ) ) TO reported-learning.
+      ENDLOOP.
+    ENDIF.
+
+    " If LearningStatus = Sent for Approval (2), only then the learning plan can be approved
+    IF ls_learnings-LearningStatusId = '2' AND ls_learnings-ApprovalStatusId <> '3'.
+
+      " Set the new Approval Status as Approved (2) and Learning Status as In Process (3)
       MODIFY ENTITIES OF zi_ilearningeval IN LOCAL MODE
         ENTITY Learning
            UPDATE
              FIELDS ( ApprovalStatusId LearningStatusId )
              WITH VALUE #( FOR key IN keys
                              ( %tky         = key-%tky
-                               ApprovalStatusId = approval_status-approved
+                               ApprovalStatusId = '2'
                                LearningStatusId = '3' ) )
         FAILED failed
         REPORTED reported.
@@ -105,8 +130,8 @@ CLASS lhc_Learning IMPLEMENTATION.
                           ( %tky   = new_learning-%tky
                             %param = new_learning ) ).
 
-    " If LearningStatus = New (1) then it cannot be approved
-    ELSEIF ls_learnings-LearningStatusId = '1'.
+    " If LearningStatus = New (1) then display the message 'This learning plan cannot be Approved/Rejected as Learning Status is New'
+    ELSEIF ls_learnings-LearningStatusId = '1' AND ls_learnings-ApprovalStatusId <> '3'.
       READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
       ENTITY Learning
         FIELDS ( LearningStatusId ) WITH CORRESPONDING #( keys )
@@ -128,41 +153,42 @@ CLASS lhc_Learning IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD rejectLearning.
-*    " Set the new overall status
-*    MODIFY ENTITIES OF zi_ilearningeval IN LOCAL MODE
-*      ENTITY Learning
-*         UPDATE
-*           FIELDS ( ApprovalStatusId )
-*           WITH VALUE #( FOR key IN keys
-*                           ( %tky         = key-%tky
-*                             ApprovalStatusId = approval_status-rejected ) )
-*      FAILED failed
-*      REPORTED reported.
-*
-*    " Fill the response table
-*    READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
-*      ENTITY Learning
-*        ALL FIELDS WITH CORRESPONDING #( keys )
-*      RESULT DATA(new_learnings).
-*
-*    result = VALUE #( FOR new_learning IN new_learnings
-*                        ( %tky   = new_learning-%tky
-*                          %param = new_learning ) ).
-
     READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
-          ENTITY Learning
-            FIELDS ( LearningStatusId ApprovalStatusId ) WITH CORRESPONDING #( keys )
-          RESULT DATA(learnings).
+            ENTITY Learning
+              FIELDS ( LearningStatusId ApprovalStatusId ) WITH CORRESPONDING #( keys )
+            RESULT DATA(learnings).
 
     DATA wa_learnings TYPE zi_ilearningeval.
     DATA ls_learnings TYPE zi_ilearningeval.
 
     LOOP AT learnings INTO wa_learnings.
       ls_learnings-LearningStatusId = wa_learnings-LearningStatusId.
+      ls_learnings-ApprovalStatusId = wa_learnings-ApprovalStatusId.
     ENDLOOP.
 
+    " If ApprovalStatus = 2 (Approved), then display the message 'This learning plan cannot be Rejected as it is already Approved'
+    IF ls_learnings-ApprovalStatusId = '2'.
+      READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
+      ENTITY Learning
+        FIELDS ( ApprovalStatusId ) WITH CORRESPONDING #( keys )
+      RESULT DATA(l_learnings).
+
+      LOOP AT l_learnings INTO DATA(l_learning).
+        APPEND VALUE #(  %tky        = l_learning-%tky
+                         %state_area = 'APPROVED_PLAN' )
+          TO reported-learning.
+
+        APPEND VALUE #( %tky = l_learning-%tky ) TO failed-learning.
+        APPEND VALUE #( %tky               = l_learning-%tky
+                        %state_area        = 'APPROVED_PLAN'
+                        %msg               = NEW zcl_iexception_message(
+                                                 severity  = if_abap_behv_message=>severity-error
+                                                 textid    = zcl_iexception_message=>approved_plan ) ) TO reported-learning.
+      ENDLOOP.
+    ENDIF.
+
     " If LearningStatus = Sent for Approval (2), only then it can be approved/rejected
-    IF ls_learnings-LearningStatusId = '2'.
+    IF ls_learnings-LearningStatusId = '2' AND ls_learnings-ApprovalStatusId <> '3'.
 
       " Set the new status as approved
       MODIFY ENTITIES OF zi_ilearningeval IN LOCAL MODE
@@ -171,8 +197,7 @@ CLASS lhc_Learning IMPLEMENTATION.
              FIELDS ( ApprovalStatusId LearningStatusId )
              WITH VALUE #( FOR key IN keys
                              ( %tky         = key-%tky
-                               ApprovalStatusId = approval_status-rejected
-                          ) )
+                               ApprovalStatusId = '3' ) )
         FAILED failed
         REPORTED reported.
 
@@ -186,8 +211,8 @@ CLASS lhc_Learning IMPLEMENTATION.
                           ( %tky   = new_learning-%tky
                             %param = new_learning ) ).
 
-    " If LearningStatus = New (1) then it cannot be approved/rejected
-    ELSEIF ls_learnings-LearningStatusId = '1'.
+      " If LearningStatus = New (1) then display the message 'This learning plan cannot be Approved/Rejected as Learning Status is New'
+    ELSEIF ls_learnings-LearningStatusId = '1' AND ls_learnings-ApprovalStatusId <> '3'.
       READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
       ENTITY Learning
         FIELDS ( LearningStatusId ) WITH CORRESPONDING #( keys )
@@ -206,71 +231,19 @@ CLASS lhc_Learning IMPLEMENTATION.
                                                  textid    = zcl_iexception_message=>unauthorized ) ) TO reported-learning.
       ENDLOOP.
     ENDIF.
-
-
-
   ENDMETHOD.
 
   METHOD setApproveRejectDate.
-    READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
-            ENTITY Learning
-              FIELDS ( ApprovalStatusId ApproveRejectDate ) WITH CORRESPONDING #( keys )
-            RESULT DATA(learnings).
-
-    " Remove all learning instance data
-    DELETE learnings WHERE ApproveRejectDate IS NOT INITIAL.
-    CHECK learnings IS NOT INITIAL.
-
-    DATA wa_learnings TYPE zi_ilearningeval.
-    DATA ls_learnings TYPE zi_ilearningeval.
-
-    LOOP AT learnings INTO wa_learnings.
-      ls_learnings-ApprovalStatusId = wa_learnings-ApprovalStatusId.
-    ENDLOOP.
-*
-    IF ls_learnings-ApprovalStatusId = '2' OR ls_learnings-ApprovalStatusId = '3'.
-      " Set LastChangedDate
-      MODIFY ENTITIES OF zi_ilearningeval IN LOCAL MODE
-      ENTITY Learning
-        UPDATE
-          FIELDS ( ApproveRejectDate )
-          WITH VALUE #( FOR learning IN learnings
-                        ( %tky         = learning-%tky
-                          ApproveRejectDate = cl_abap_context_info=>get_system_date( ) ) )
-      REPORTED DATA(update_reported).
-      reported = CORRESPONDING #( DEEP update_reported ).
-    ENDIF.
-
   ENDMETHOD.
 
   METHOD setLastUpdateDate.
-    READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
-            ENTITY Learning
-              FIELDS ( LastChangedDate ) WITH CORRESPONDING #( keys )
-            RESULT DATA(learnings).
-
-    " Remove all learning instance data
-    DELETE learnings WHERE LastChangedDate IS NOT INITIAL.
-    CHECK learnings IS NOT INITIAL.
-
-    " Set LastChangedDate
-    MODIFY ENTITIES OF zi_ilearningeval IN LOCAL MODE
-    ENTITY Learning
-      UPDATE
-        FIELDS ( LastChangedDate )
-        WITH VALUE #( FOR learning IN learnings
-                      ( %tky         = learning-%tky
-                        LastChangedDate = cl_abap_context_info=>get_system_date( ) ) )
-    REPORTED DATA(update_reported).
-    reported = CORRESPONDING #( DEEP update_reported ).
-
   ENDMETHOD.
 
   METHOD calculateLearningID.
     READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
-     ENTITY Learning
-       FIELDS ( LearningId ) WITH CORRESPONDING #( keys )
-     RESULT DATA(learnings).
+    ENTITY Learning
+      FIELDS ( LearningId ) WITH CORRESPONDING #( keys )
+    RESULT DATA(learnings).
 
     " remove lines where LearningID is already filled.
     DELETE learnings WHERE LearningId IS NOT INITIAL.
@@ -294,60 +267,16 @@ CLASS lhc_Learning IMPLEMENTATION.
           %control-LearningId   = if_abap_behv=>mk-on ) )
     REPORTED DATA(update_reported).
     reported = CORRESPONDING #( DEEP update_reported ).
-
   ENDMETHOD.
 
   METHOD setCreationDate.
-    READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
-            ENTITY Learning
-              FIELDS ( CreationDate ) WITH CORRESPONDING #( keys )
-            RESULT DATA(learnings).
-
-    " Remove all learning instance data
-    DELETE learnings WHERE CreationDate IS NOT INITIAL.
-    CHECK learnings IS NOT INITIAL.
-
-    " Set LastChangedDate
-    MODIFY ENTITIES OF zi_ilearningeval IN LOCAL MODE
-    ENTITY Learning
-      UPDATE
-        FIELDS ( CreationDate )
-        WITH VALUE #( FOR learning IN learnings
-                      ( %tky         = learning-%tky
-                        CreationDate = cl_abap_context_info=>get_system_date( ) ) )
-    REPORTED DATA(update_reported).
-    reported = CORRESPONDING #( DEEP update_reported ).
-
-  ENDMETHOD.
-
-  METHOD setInitialLearningStatus.
-    READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
-            ENTITY Learning
-              FIELDS ( LearningStatusId ) WITH CORRESPONDING #( keys )
-            RESULT DATA(learnings).
-
-    " Remove all learning instance data with defined status
-    DELETE learnings WHERE LearningStatusId IS NOT INITIAL.
-    CHECK learnings IS NOT INITIAL.
-
-    " Set LastChangedDate
-    MODIFY ENTITIES OF zi_ilearningeval IN LOCAL MODE
-    ENTITY Learning
-      UPDATE
-        FIELDS ( LearningStatusId )
-        WITH VALUE #( FOR learning IN learnings
-                      ( %tky         = learning-%tky
-                        LearningStatusId = '1' ) )
-    REPORTED DATA(update_reported).
-    reported = CORRESPONDING #( DEEP update_reported ).
-
   ENDMETHOD.
 
   METHOD setInitialApprovalStatus.
     READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
-            ENTITY Learning
-              FIELDS ( ApprovalStatusId ) WITH CORRESPONDING #( keys )
-            RESULT DATA(learnings).
+             ENTITY Learning
+               FIELDS ( ApprovalStatusId ) WITH CORRESPONDING #( keys )
+             RESULT DATA(learnings).
 
     " Remove all learning instance data with defined status
     DELETE learnings WHERE ApprovalStatusId IS NOT INITIAL.
@@ -363,36 +292,34 @@ CLASS lhc_Learning IMPLEMENTATION.
                         ApprovalStatusId = '1' ) )
     REPORTED DATA(update_reported).
     reported = CORRESPONDING #( DEEP update_reported ).
+  ENDMETHOD.
 
+  METHOD setInitialLearningStatus.
+    READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
+              ENTITY Learning
+                FIELDS ( LearningStatusId ) WITH CORRESPONDING #( keys )
+              RESULT DATA(learnings).
+
+    " Remove all learning instance data with defined status
+    DELETE learnings WHERE LearningStatusId IS NOT INITIAL.
+    CHECK learnings IS NOT INITIAL.
+
+    " Set LastChangedDate
+    MODIFY ENTITIES OF zi_ilearningeval IN LOCAL MODE
+    ENTITY Learning
+      UPDATE
+        FIELDS ( LearningStatusId )
+        WITH VALUE #( FOR learning IN learnings
+                      ( %tky         = learning-%tky
+                        LearningStatusId = '1' ) )
+    REPORTED DATA(update_reported).
+    reported = CORRESPONDING #( DEEP update_reported ).
   ENDMETHOD.
 
   METHOD validateDates.
-    " Read relevant travel instance data
-    READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
-      ENTITY Learning
-        FIELDS ( LearningId StartDate EndDate ) WITH CORRESPONDING #( keys )
-      RESULT DATA(learnings).
+  ENDMETHOD.
 
-    LOOP AT learnings INTO DATA(learning).
-      " Clear state messages that might exist
-      APPEND VALUE #(  %tky        = learning-%tky
-                       %state_area = 'VALIDATE_DATES' )
-        TO reported-learning.
-
-      IF learning-EndDate < learning-StartDate.
-        APPEND VALUE #( %tky = learning-%tky ) TO failed-learning.
-        APPEND VALUE #( %tky               = learning-%tky
-                        %state_area        = 'VALIDATE_DATES'
-                        %msg               = NEW zcl_iexception_message(
-                                                 severity  = if_abap_behv_message=>severity-error
-                                                 textid    = zcl_iexception_message=>date_interval
-                                                 begindate = learning-StartDate
-                                                 enddate   = learning-EndDate
-                                                 )
-                       ) TO reported-learning.
-
-      ENDIF.
-    ENDLOOP.
+  METHOD validateLearningStatus.
   ENDMETHOD.
 
 ENDCLASS.

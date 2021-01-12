@@ -7,12 +7,14 @@ lock master
 //etag master <field_name>
 {
   create;
-  update;
-  delete;
-
+  update ( features:instance );
+  delete ( features:instance );
   field ( numbering : managed, readonly ) LearningUuid;
-  field ( mandatory : create ) EmployeeId, EmployeeName, CoreSkill, TopicToLearn, LearningOutcomeId, StartDate, EndDate, HoursEstimated ;
+
   field ( readonly ) LearningId, LastChangedDate, ApproveRejectDate;
+  field ( features : instance ) PointsEarned, LearningOutcomeDate, HoursOfOutcome, LearningSource, LearningStatusId;
+  field ( mandatory : create ) EmployeeId, EmployeeName, CoreSkill, TopicToLearn, LearningOutcomeId, StartDate, EndDate, HoursEstimated ;
+//    field ( mandatory : create, readonly : update ) EmployeeId, EmployeeName, CoreSkill, TopicToLearn, LearningOutcomeId, StartDate, EndDate, HoursEstimated ;
 
   determination setInitialLearningStatus on save { create; }
   determination setInitialApprovalStatus on save { create; }
@@ -25,6 +27,7 @@ lock master
   action ( features : instance ) rejectLearning result [1] $self;
 
   validation validateDates on save { field StartDate, EndDate; create; update; }
+  validation validateLearningStatus on save { field LearningStatusId, LearningOutcomeDate; create; update;}
 
   mapping for zilearningeval
   {

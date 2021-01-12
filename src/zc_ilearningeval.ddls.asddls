@@ -36,12 +36,16 @@ define root view entity ZC_ILEARNINGEVAL
       @Search.defaultSearchElement: true
       ApprovalStatusId,
       _ApprovalStatus.ApprovalStatus   as ApprovalStatus,
+      
+      ApprovalStatusC,
 
       @Consumption.valueHelpDefinition: [{ entity: { name: 'ZI_ILEARNSTATUS', element: 'LearningStatusId'} }]
       @ObjectModel.text.element: ['LearningStatus']
       @Search.defaultSearchElement: true
       LearningStatusId,
       _LearningStatus.LearningStatus   as LearningStatus,
+      
+      LearningStatusC,
       
       @Search.defaultSearchElement: true
       PointsEarned,

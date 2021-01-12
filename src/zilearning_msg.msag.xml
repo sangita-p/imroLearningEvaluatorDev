@@ -18,7 +18,31 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZILEARNING_MSG</ARBGB>
      <MSGNR>002</MSGNR>
-     <TEXT>This Plan cannot be approved/rejected as Learning Status is in New state</TEXT>
+     <TEXT>This learning plan cannot be Approved/Rejected as Learning Status is New</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZILEARNING_MSG</ARBGB>
+     <MSGNR>003</MSGNR>
+     <TEXT>This learning plan cannot be Approved as it is already Rejected</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZILEARNING_MSG</ARBGB>
+     <MSGNR>004</MSGNR>
+     <TEXT>This learning plan cannot be Rejected as it is already Approved</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZILEARNING_MSG</ARBGB>
+     <MSGNR>005</MSGNR>
+     <TEXT>Learning Status cannot be updated to &amp;1 as Learning Plan is not Approved</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZILEARNING_MSG</ARBGB>
+     <MSGNR>006</MSGNR>
+     <TEXT>This learning plan cannot be Deleted as its already Approved/Rejected</TEXT>
     </T100>
    </T100>
   </asx:values>

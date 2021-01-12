@@ -10,7 +10,7 @@
     }
   },
   presentationVariant: [ { sortOrder: [ { by       : 'LearningId',
-                                          direction:  #ASC } ] } ]
+                                          direction:  #DESC } ] } ]
 }
 annotate view ZC_ILEARNINGEVAL with
 {
@@ -124,12 +124,8 @@ annotate view ZC_ILEARNINGEVAL with
   @UI: { fieldGroup:     [ { qualifier: 'Fieldgroup2', position: 90 } ] }
   @EndUserText.label: 'Learning Source'
   LearningSource;
-
-  //  @UI: {  lineItem:       [ { position: 90, label: 'Approval Status' } ],
-  //      selectionField: [ { position: 60 } ],
-  //      fieldGroup:     [ { qualifier: 'Fieldgroup3', position: 10 } ] }
-  //  @EndUserText.label: 'Approval Status'
-  @UI: { lineItem:       [ { position: 90, label: 'Approval Status' },
+  
+  @UI: { lineItem:       [ { position: 90, label: 'Approval Status', value: 'ApprovalStatus', criticality: 'ApprovalStatusC' },
                            { type: #FOR_ACTION, dataAction: 'rejectLearning', label: 'Reject Learning Plan' },
                            { type: #FOR_ACTION, dataAction: 'approveLearning', label: 'Approve Learning Plan' }
                          ],
@@ -145,7 +141,7 @@ annotate view ZC_ILEARNINGEVAL with
 //  @EndUserText.label: 'Approve/Reject Date'
 //  ApproveRejectDate;
 
-  @UI: { lineItem:       [ { position: 100, label: 'Learning Status' } ],
+  @UI: { lineItem:       [ { position: 100, label: 'Learning Status', value: 'LearningStatus', criticality: 'LearningStatusC'} ],
          selectionField: [ { position: 30 } ],
          fieldGroup:     [ { qualifier: 'Fieldgroup3', position: 30 } ] }
   @EndUserText.label: 'Learning Status'
