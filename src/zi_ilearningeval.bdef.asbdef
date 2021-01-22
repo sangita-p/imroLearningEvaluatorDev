@@ -11,9 +11,9 @@ lock master
   delete ( features:instance );
   field ( numbering : managed, readonly ) LearningUuid;
 
-  field ( readonly ) LearningId, LastChangedDate, ApproveRejectDate;
-  field ( features : instance ) PointsEarned, LearningOutcomeDate, HoursOfOutcome, LearningSource, LearningStatusId;
-  field ( mandatory : create ) EmployeeId, EmployeeName, CoreSkill, TopicToLearn, LearningOutcomeId, StartDate, EndDate, HoursEstimated ;
+  field ( readonly ) LearningId, LastChangedDate, ApproveRejectDate, LearningOutcome, LearningStatus;
+  field ( features : instance )  EmployeeId, EmployeeName, EmployeeBand, CoreSkill, TopicToLearn, LearningOutcomeId, StartDate, EndDate, HoursEstimated, PointsEarned, LearningOutcomeDate, HoursOfOutcome, LearningSource, LearningStatusId;
+//  field ( mandatory : create ) EmployeeId, EmployeeName, CoreSkill, TopicToLearn, LearningOutcomeId, StartDate, EndDate, HoursEstimated ;
 //    field ( mandatory : create, readonly : update ) EmployeeId, EmployeeName, CoreSkill, TopicToLearn, LearningOutcomeId, StartDate, EndDate, HoursEstimated ;
 
   determination setInitialLearningStatus on save { create; }

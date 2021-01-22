@@ -17,34 +17,41 @@ define root view entity ZC_ILEARNINGEVAL
       CoreSkill,
       @Search.defaultSearchElement: true
       TopicToLearn,
-      LearningMode,
+      LearningMode,   
       
-      @Consumption.valueHelpDefinition: [{ entity: { name: 'ZI_ILEARNOUTCOME', element: 'LearningOutcomeId'} }]
-      @ObjectModel.text.element: ['LearningOutcome']
+      @Consumption.valueHelpDefinition: [{ entity: { name: 'ZI_ILEARNOUTCOME', element: 'LearningOutcomeId'},
+                                           additionalBinding: [{ localElement: 'LearningOutcome', element: 'LearningOutcome' }] }]
+//      @Consumption.valueHelpDefinition: [{ entity: { name: 'ZI_ILEARNOUTCOME', element: 'LearningOutcomeId'} }]
+//      @ObjectModel.text.element: ['LearningOutcome']
       @Search.defaultSearchElement: true
       LearningOutcomeId,
-      _LearningOutcome.LearningOutcome as LearningOutcome,
+      LearningOutcome,
       
+      @Search.defaultSearchElement: true
+//      @Consumption.filter: { selectionType: #INTERVAL, multipleSelections: false }
       StartDate,
+      @Search.defaultSearchElement: true
       EndDate,
       HoursEstimated,
       HoursOfOutcome,
       LearningSource,
       
-      @Consumption.valueHelpDefinition: [{ entity: { name: 'ZI_IAPPROVESTATUS', element: 'ApprovalStatusId'} }]
-      @ObjectModel.text.element: ['ApprovalStatus']
+//      @Consumption.valueHelpDefinition: [{ entity: { name: 'ZI_IAPPROVESTATUS', element: 'ApprovalStatusId'} }]
+//      @ObjectModel.text.element: ['ApprovalStatus']
+      @Consumption.valueHelpDefinition: [{ entity: { name: 'ZI_IAPPROVESTATUS', element: 'ApprovalStatusId'},
+                                           additionalBinding: [{ localElement: 'ApprovalStatus', element: 'ApprovalStatus' }] }]
       @Search.defaultSearchElement: true
       ApprovalStatusId,
-      _ApprovalStatus.ApprovalStatus   as ApprovalStatus,
-      
+      ApprovalStatus,     
       ApprovalStatusC,
 
       @Consumption.valueHelpDefinition: [{ entity: { name: 'ZI_ILEARNSTATUS', element: 'LearningStatusId'} }]
+//      @Consumption.valueHelpDefinition: [{ entity: { name: 'ZI_ILEARNSTATUS', element: 'LearningStatusId'},
+//                                           additionalBinding: [{ localElement: 'LearningStatus', element: 'LearningStatus' }] }]
       @ObjectModel.text.element: ['LearningStatus']
       @Search.defaultSearchElement: true
       LearningStatusId,
-      _LearningStatus.LearningStatus   as LearningStatus,
-      
+      LearningStatus,    
       LearningStatusC,
       
       @Search.defaultSearchElement: true

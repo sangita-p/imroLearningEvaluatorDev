@@ -59,14 +59,71 @@ CLASS lhc_Learning IMPLEMENTATION.
                            %action-approveLearning = is_accepted
                            %action-rejectLearning = is_rejected
 
-                           " When Learning Plan is Rejected(3), it cannot be updated
+                           " When Learning Plan is Rejected(3) or when Learning Status = Complete (5), it cannot be updated
+                           "%features-%update = COND #( WHEN learning-ApprovalStatusId = '3' OR ( learning-LearningStatusId = '5' AND learning-PointsEarned <> '' )
                             %features-%update = COND #( WHEN learning-ApprovalStatusId = '3'
                                                         THEN if_abap_behv=>fc-f-read_only
                                                         ELSE if_abap_behv=>fc-f-unrestricted )
+
                            " When Learning Plan is Approved(2) or Rejected(3), it cannot be deleted
                             %features-%delete = COND #( WHEN learning-ApprovalStatusId = '2' OR learning-ApprovalStatusId = '3'
                                                         THEN if_abap_behv=>fc-o-disabled
                                                         ELSE if_abap_behv=>fc-o-enabled )
+
+                            "Conditions specifying when Points Earned field should be disabled
+                            %field-PointsEarned = COND #( WHEN ( learning-ApprovalStatusId = '1' AND learning-LearningStatusId = '1' ) OR
+                                                               ( learning-ApprovalStatusId = '1' AND learning-LearningStatusId = '2' ) OR
+                                                               ( learning-ApprovalStatusId = '2' AND learning-LearningStatusId = '3' ) OR
+                                                               ( learning-ApprovalStatusId = '2' AND learning-LearningStatusId = '4' ) OR
+                                                               ( learning-ApprovalStatusId = '2' AND learning-LearningStatusId = '5' AND learning-PointsEarned <> '' ) OR
+                                                               learning-ApprovalStatusId = '3'
+                                                          THEN if_abap_behv=>fc-f-read_only
+                                                          ELSE if_abap_behv=>fc-f-unrestricted )
+
+                            "Conditions specifying when LearningOutcomeDate field should be disabled
+                            %field-LearningOutcomeDate = COND #( WHEN ( learning-ApprovalStatusId = '1' AND learning-LearningStatusId = '1' ) OR
+                                                               ( learning-ApprovalStatusId = '1' AND learning-LearningStatusId = '2' ) OR
+                                                               ( learning-ApprovalStatusId = '2' AND learning-LearningStatusId = '3' ) OR
+                                                               learning-ApprovalStatusId = '3'
+                                                          THEN if_abap_behv=>fc-f-read_only
+                                                          ELSE if_abap_behv=>fc-f-unrestricted )
+
+                            " When Learning Plan is Approved(2) EmployeeId should be non-editable
+                            %field-EmployeeId = COND #( WHEN learning-ApprovalStatusId = '2'
+                                                        THEN if_abap_behv=>fc-f-read_only
+                                                        ELSE if_abap_behv=>fc-f-unrestricted )
+                            " When Learning Plan is Approved(2) EmployeeName should be non-editable
+                            %field-EmployeeName = COND #( WHEN learning-ApprovalStatusId = '2'
+                                                        THEN if_abap_behv=>fc-f-read_only
+                                                        ELSE if_abap_behv=>fc-f-unrestricted )
+                            " When Learning Plan is Approved(2) EmployeeBand should be non-editable
+                            %field-EmployeeBand = COND #( WHEN learning-ApprovalStatusId = '2'
+                                                        THEN if_abap_behv=>fc-f-read_only
+                                                        ELSE if_abap_behv=>fc-f-unrestricted )
+                            " When Learning Plan is Approved(2) CoreSkill should be non-editable
+                            %field-CoreSkill = COND #( WHEN learning-ApprovalStatusId = '2'
+                                                        THEN if_abap_behv=>fc-f-read_only
+                                                        ELSE if_abap_behv=>fc-f-unrestricted )
+                            " When Learning Plan is Approved(2) TopicToLearn should be non-editable
+                            %field-TopicToLearn = COND #( WHEN learning-ApprovalStatusId = '2'
+                                                        THEN if_abap_behv=>fc-f-read_only
+                                                        ELSE if_abap_behv=>fc-f-unrestricted )
+                            " When Learning Plan is Approved(2) LearningOutcome should be non-editable
+                            %field-LearningOutcomeId = COND #( WHEN learning-ApprovalStatusId = '2'
+                                                        THEN if_abap_behv=>fc-f-read_only
+                                                        ELSE if_abap_behv=>fc-f-unrestricted )
+                            " When Learning Plan is Approved(2) StartDate should be non-editable
+                            %field-StartDate = COND #( WHEN learning-ApprovalStatusId = '2'
+                                                        THEN if_abap_behv=>fc-f-read_only
+                                                        ELSE if_abap_behv=>fc-f-unrestricted )
+                            " When Learning Plan is Approved(2) EndDate should be non-editable
+                            %field-EndDate = COND #( WHEN learning-ApprovalStatusId = '2'
+                                                        THEN if_abap_behv=>fc-f-read_only
+                                                        ELSE if_abap_behv=>fc-f-unrestricted )
+                            " When Learning Plan is Approved(2) HoursEstimated should be non-editable
+                            %field-HoursEstimated = COND #( WHEN learning-ApprovalStatusId = '2'
+                                                        THEN if_abap_behv=>fc-f-read_only
+                                                        ELSE if_abap_behv=>fc-f-unrestricted )
                 ) ).
   ENDMETHOD.
 
@@ -130,7 +187,7 @@ CLASS lhc_Learning IMPLEMENTATION.
                           ( %tky   = new_learning-%tky
                             %param = new_learning ) ).
 
-    " If LearningStatus = New (1) then display the message 'This learning plan cannot be Approved/Rejected as Learning Status is New'
+      " If LearningStatus = New (1) then display the message 'This learning plan cannot be Approved/Rejected as Learning Status is New'
     ELSEIF ls_learnings-LearningStatusId = '1' AND ls_learnings-ApprovalStatusId <> '3'.
       READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
       ENTITY Learning
@@ -234,9 +291,56 @@ CLASS lhc_Learning IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD setApproveRejectDate.
+    READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
+              ENTITY Learning
+                FIELDS ( ApprovalStatusId ApproveRejectDate ) WITH CORRESPONDING #( keys )
+              RESULT DATA(learnings).
+
+    " Remove all learning instance data
+    DELETE learnings WHERE ApproveRejectDate IS NOT INITIAL.
+    CHECK learnings IS NOT INITIAL.
+
+    DATA wa_learnings TYPE zi_ilearningeval.
+    DATA ls_learnings TYPE zi_ilearningeval.
+
+    LOOP AT learnings INTO wa_learnings.
+      ls_learnings-ApprovalStatusId = wa_learnings-ApprovalStatusId.
+    ENDLOOP.
+*
+    IF ls_learnings-ApprovalStatusId = '2' OR ls_learnings-ApprovalStatusId = '3'.
+      " Set LastChangedDate
+      MODIFY ENTITIES OF zi_ilearningeval IN LOCAL MODE
+      ENTITY Learning
+        UPDATE
+          FIELDS ( ApproveRejectDate )
+          WITH VALUE #( FOR learning IN learnings
+                        ( %tky         = learning-%tky
+                          ApproveRejectDate = cl_abap_context_info=>get_system_date( ) ) )
+      REPORTED DATA(update_reported).
+      reported = CORRESPONDING #( DEEP update_reported ).
+    ENDIF.
   ENDMETHOD.
 
   METHOD setLastUpdateDate.
+    READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
+              ENTITY Learning
+                FIELDS ( LastChangedDate ) WITH CORRESPONDING #( keys )
+              RESULT DATA(learnings).
+
+    " Remove all learning instance data
+    DELETE learnings WHERE LastChangedDate IS NOT INITIAL.
+    CHECK learnings IS NOT INITIAL.
+
+    " Set LastChangedDate
+    MODIFY ENTITIES OF zi_ilearningeval IN LOCAL MODE
+    ENTITY Learning
+      UPDATE
+        FIELDS ( LastChangedDate )
+        WITH VALUE #( FOR learning IN learnings
+                      ( %tky         = learning-%tky
+                        LastChangedDate = cl_abap_context_info=>get_system_date( ) ) )
+    REPORTED DATA(update_reported).
+    reported = CORRESPONDING #( DEEP update_reported ).
   ENDMETHOD.
 
   METHOD calculateLearningID.
@@ -270,6 +374,25 @@ CLASS lhc_Learning IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD setCreationDate.
+    READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
+              ENTITY Learning
+                FIELDS ( CreationDate ) WITH CORRESPONDING #( keys )
+              RESULT DATA(learnings).
+
+    " Remove all learning instance data
+    DELETE learnings WHERE CreationDate IS NOT INITIAL.
+    CHECK learnings IS NOT INITIAL.
+
+    " Set LastChangedDate
+    MODIFY ENTITIES OF zi_ilearningeval IN LOCAL MODE
+    ENTITY Learning
+      UPDATE
+        FIELDS ( CreationDate )
+        WITH VALUE #( FOR learning IN learnings
+                      ( %tky         = learning-%tky
+                        CreationDate = cl_abap_context_info=>get_system_date( ) ) )
+    REPORTED DATA(update_reported).
+    reported = CORRESPONDING #( DEEP update_reported ).
   ENDMETHOD.
 
   METHOD setInitialApprovalStatus.
@@ -317,9 +440,72 @@ CLASS lhc_Learning IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD validateDates.
+    " Read relevant travel instance data
+    READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
+      ENTITY Learning
+        FIELDS ( LearningId StartDate EndDate ) WITH CORRESPONDING #( keys )
+      RESULT DATA(learnings).
+
+    LOOP AT learnings INTO DATA(learning).
+      " Clear state messages that might exist
+      APPEND VALUE #(  %tky        = learning-%tky
+                       %state_area = 'VALIDATE_DATES' )
+        TO reported-learning.
+
+      IF learning-EndDate < learning-StartDate.
+        APPEND VALUE #( %tky = learning-%tky ) TO failed-learning.
+        APPEND VALUE #( %tky               = learning-%tky
+                        %state_area        = 'VALIDATE_DATES'
+                        %msg               = NEW zcl_iexception_message(
+                                                 severity  = if_abap_behv_message=>severity-error
+                                                 textid    = zcl_iexception_message=>date_interval
+                                                 begindate = learning-StartDate
+                                                 enddate   = learning-EndDate
+                                                 )
+                       ) TO reported-learning.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
   METHOD validateLearningStatus.
+    READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
+          ENTITY Learning
+            FIELDS ( LearningStatusId ApprovalStatusId ) WITH CORRESPONDING #( keys )
+          RESULT DATA(learnings).
+
+    DATA wa_learnings TYPE zi_ilearningeval.
+    DATA ls_learnings TYPE zi_ilearningeval.
+
+    LOOP AT learnings INTO wa_learnings.
+      ls_learnings-LearningStatusId = wa_learnings-LearningStatusId.
+      ls_learnings-ApprovalStatusId = wa_learnings-ApprovalStatusId.
+    ENDLOOP.
+
+    IF ls_learnings-ApprovalStatusId = '1' AND ( ls_learnings-LearningStatusId = '3' OR ls_learnings-LearningStatusId = '4' OR ls_learnings-LearningStatusId = '5').
+
+      READ ENTITIES OF zi_ilearningeval IN LOCAL MODE
+      ENTITY Learning
+        FIELDS ( ApprovalStatusId ) WITH CORRESPONDING #( keys )
+      RESULT DATA(l_learnings).
+
+      LOOP AT l_learnings INTO DATA(l_learning).
+        APPEND VALUE #(  %tky        = l_learning-%tky
+                         %state_area = 'LEARNING_STATUS' )
+          TO reported-learning.
+
+        APPEND VALUE #( %tky = l_learning-%tky ) TO failed-learning.
+        APPEND VALUE #( %tky               = l_learning-%tky
+                        %state_area        = 'LEARNING_STATUS'
+                        %msg               = NEW zcl_iexception_message(
+                                                 severity  = if_abap_behv_message=>severity-error
+                                                 textid    = zcl_iexception_message=>learning_status
+                                                 learningstatus = l_learning-LearningStatusId
+
+                                                 ) ) TO reported-learning.
+      ENDLOOP.
+    ELSEIF ls_learnings-LearningStatusId = '1' OR ls_learnings-LearningStatusId = '2'.
+*     Perform the Create/Update operation
+    ENDIF.
   ENDMETHOD.
 
 ENDCLASS.
